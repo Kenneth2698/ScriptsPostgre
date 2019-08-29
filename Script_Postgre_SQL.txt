@@ -1,0 +1,41 @@
+CREATE TABLE PROVIDER (
+	id int PRIMARY KEY,
+	name varchar(50),
+	address varchar(50)
+)
+
+CREATE TABLE PRODUCT (
+	id int PRIMARY KEY,
+	name varchar(50),
+	price int,
+	image varchar(50),
+	status int,
+	provider int REFERENCES PROVIDER(id)
+)
+
+CREATE or replace FUNCTION getProviders()
+RETURNS SETOF PROVIDER AS
+$BODY$
+DECLARE
+    reg RECORD;
+BEGIN
+    FOR REG IN SELECT id,name,address FROM PROVIDER LOOP
+       RETURN NEXT reg;
+    END LOOP;
+    RETURN;
+END
+$BODY$ LANGUAGE 'plpgsql'
+
+insert into PROVIDER values (1,'Extremetech','Cartago')
+insert into PROVIDER values (2,'EPA','San Pedro')
+
+insert into PRODUCT values (1,'Laptop MSI',575000,'laptop.png',1,1)
+insert into PRODUCT values (2,'SSD',32000,'ssd.png',1,1)
+
+insert into PRODUCT values (3,'Martillo',5200,'martillo.png',1,2)
+insert into PRODUCT values (4,'Taladro',43000,'taladro.png',1,2)
+
+
+
+
+
