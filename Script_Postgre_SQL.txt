@@ -1,3 +1,20 @@
+CREATE TABLE USERS (
+	id SERIAL PRIMARY KEY,
+	userName varchar(50),
+	pass varchar(200)
+)
+________________________________________________________________________________________________
+CREATE TABLE cart (
+	id SERIAL PRIMARY KEY,
+	name varchar(50),
+	price int,
+	image varchar(50),
+  	description varchar(200),
+	cant int,
+	provider int REFERENCES PROVIDER(id),
+	userID int REFERENCES USERS(id)
+)
+________________________________________________________________________________________________
 CREATE TABLE PROVIDER (
 	id int PRIMARY KEY,
 	name varchar(50),
@@ -5,11 +22,12 @@ CREATE TABLE PROVIDER (
 )
 ________________________________________________________________________________________________
 CREATE TABLE PRODUCT (
-	id int PRIMARY KEY,
+	id SERIAL PRIMARY KEY ,
 	name varchar(50),
 	price int,
 	image varchar(50),
 	status int,
+  	description varchar(200),
 	provider int REFERENCES PROVIDER(id)
 )
 ________________________________________________________________________________________________
@@ -30,6 +48,61 @@ insert into PROVIDER values (1,'Extremetech','Cartago')
 
 insert into PRODUCT values (8,'Martillo',5200,'Es un martillo','martillo.png',1,2)
 
+INSERT INTO product
+VALUES
+ (
+	 DEFAULT,
+	'PC AMD',
+	 148000,
+	 'public/imgs/p5.jpg',
+	 1,
+	 'RYZEN 3 3200G - 8 GB RAM',
+	 1
+), (
+	DEFAULT,
+	'PC INTEL',
+	 205000,
+	'public/imgs/p6.jpg',
+	1,
+	 'CORE I5 9400F - 8 GB RAM',
+	 1
+), (
+	DEFAULT,
+	'XTREMEPC SENTRY',
+	 210000,
+	'public/imgs/p3.jpg',
+	1,
+	 'Procesador: Intel Pentium G5400 - Tarjeta Madre: Asrock H310M - Memoria: 8 GB DDR4 2400 - Tarjeta de Video: AMD Radeon RX 550 2 GB - Disco SSD: 240 GB ',
+	 
+	 1
+),(
+	DEFAULT,
+	'XTREMEPC LEVEL 1 - INTEL - RGB',
+	 265000,
+	'public/imgs/p2.jpg',
+	1,
+	 'Procesador: Intel Core i3 9100F - Tarjeta Madre: Asrock H310M - Memoria: 8 GB DDR4 2400 - Tarjeta de Video: AMD Radeon RX 570 4 GB - Disco SSD: 240 GB',
+	 1
+),(
+	DEFAULT,
+	'XTREMEPC LEVEL 2 - INTEL',
+	 290000,
+	'public/imgs/p1.jpg',
+	1,
+	 'Procesador: Intel Core i3 9100F - Tarjeta Madre: Asrock H310M - Memoria: 8 GB DDR4 2400 - Tarjeta de Video: AMD Radeon RX 570 4 GB - Case: Phanteks Eclipse P300 - Vidrio Temperado',
+	 
+	 1
+),(
+	DEFAULT,
+	'XTREMEPC LEVEL 3 - AMD',
+	 430000,
+	'public/imgs/p4.jpg',
+	1,
+	 'Procesador: AMD Ryzen 5 3600 - Tarjeta Madre: Asrock B450M-HDV - Memoria: 8 GB DDR4 2666 - Tarjeta de Video: AMD Radeon RX 590 8 GB - Disco Duro: 1 TB 7200 RPM',
+	 
+	 1
+)
+
 ________________________________________________________________________________________________
 
 
@@ -39,7 +112,21 @@ $BODY$
 DECLARE
     reg RECORD;
 BEGIN
-    FOR REG IN SELECT id,name,price,description,image,status,provider FROM PRODUCT WHERE provider = p_id ORDER BY id LOOP
+    FOR REG IN SELECT id,name,price,image,status,description,provider FROM PRODUCT WHERE provider = p_id ORDER BY id LOOP
+       RETURN NEXT reg;
+    END LOOP;
+    RETURN;
+END
+$BODY$ LANGUAGE 'plpgsql'
+
+__________________________________________________________________________________________________
+CREATE or replace FUNCTION getAllProducts()
+RETURNS SETOF PRODUCT AS
+$BODY$
+DECLARE
+    reg RECORD;
+BEGIN
+    FOR REG IN SELECT id,name,price,image,status, description, provider FROM PRODUCT WHERE status != 0 ORDER BY id LOOP
        RETURN NEXT reg;
     END LOOP;
     RETURN;
@@ -105,6 +192,62 @@ END;
 $BODY$ 
 LANGUAGE 'plpgsql'
 ________________________________________________________________________________________________
+CREATE or replace FUNCTION verifyUser(userN varchar(50), passU varchar(200))
+RETURNS SETOF int AS
+$BODY$
+BEGIN
+    IF NOT EXISTS (SELECT * from users WHERE username = userN  and pass = passU )then
+			return query select 0 as resultado;
+	ELSE 
+		return query select id from users WHERE username = userN  and pass = passU;
+	END IF;
+END
+$BODY$ LANGUAGE 'plpgsql'
+________________________________________________________________________________________________
+CREATE OR REPLACE function registerUser(userN varchar(50) , passN varchar(200))
+RETURNS SETOF int AS
+$BODY$
+BEGIN
+	IF NOT EXISTS (SELECT * from USERS WHERE userN = username and passN = pass)then
+		INSERT INTO USERS (userName, pass) VALUES(userN, passN );	
+	ELSE 
+		return query select 1 as resultado;
+	END IF;
+   
+END;
+$BODY$ 
+LANGUAGE 'plpgsql'
+________________________________________________________________________________________________
+CREATE or replace FUNCTION getProduct(idP int)
+RETURNS SETOF PRODUCT AS
+$BODY$
+DECLARE
+    reg RECORD;
+BEGIN
+    FOR REG IN SELECT id,name,price,image,status, description, provider FROM PRODUCT WHERE id = idP ORDER BY id LOOP
+       RETURN NEXT reg;
+    END LOOP;
+    RETURN;
+END
+$BODY$ LANGUAGE 'plpgsql'
+________________________________________________________________________________________________
+CREATE OR REPLACE function addProductCart(nameN varchar(50), price int, image varchar(50),
+										  description varchar(200), cantN int, provider int , userIDN int)
+RETURNS SETOF int AS
+$BODY$
+BEGIN
+	IF NOT EXISTS (SELECT * from CART WHERE userID = userIDN and name = nameN)then
+		INSERT INTO CART (name, price, image, description, cant, provider, userID) 
+		VALUES (nameN, price, image, description, cantN, provider, userIDN);	
+	ELSE 
+		UPDATE CART SET cant = cant + cantN WHERE userID = userIDN and name = nameN;
+	END IF;
+	return query select 1 as resultado;
+END;
+$BODY$ 
+LANGUAGE 'plpgsql'
+________________________________________________________________________________________________
+
 
 642639
 
@@ -128,8 +271,8 @@ $BODY$
 LANGUAGE 'plpgsql'
 
 
+__________________________________________________
 
-*******************************************************************************************************************************
 
 CREATE OR REPLACE function getProviderId(p_code varchar(200))
 RETURNS SETOF int AS
@@ -140,8 +283,4 @@ END;
 $BODY$ 
 LANGUAGE 'plpgsql'
 
-
-select * from codes
-
-select getProviderId as resultado from getProviderId('NDY0ODI5')
-
+insert into provider values (0,'Principal','Turrialba')// CAMBIAR CON EL NOMBRE QUE VA A QUEDAR FINALMENTE
