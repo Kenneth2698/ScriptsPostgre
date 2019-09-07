@@ -58,3 +58,90 @@ LANGUAGE 'plpgsql'
 
 ________________________________________________________________________________________________
 
+CREATE TABLE CODES(
+	provider int REFERENCES PROVIDER(id),
+	code varchar(200),
+	status int
+)
+
+________________________________________________________________________________________________
+CREATE OR REPLACE function saveCode(p_provider int , p_code varchar(200),p_status int)
+RETURNS SETOF CODES AS
+$BODY$
+BEGIN
+	IF NOT EXISTS (SELECT * from CODES WHERE provider = p_provider)then
+		INSERT INTO CODES VALUES(p_provider , p_code,p_status);	
+	END IF;
+	
+	RETURN QUERY SELECT PROVIDER,CODE,STATUS FROM CODES WHERE provider = p_provider;
+   
+END;
+$BODY$ 
+LANGUAGE 'plpgsql'
+
+________________________________________________________________________________________________
+CREATE OR REPLACE function createProvider(p_id int , p_name varchar(50),p_address varchar(50))
+RETURNS VOID AS
+$BODY$
+BEGIN
+	IF NOT EXISTS (SELECT * from PROVIDER WHERE id = p_id)then
+		INSERT INTO PROVIDER VALUES(p_id , p_name,p_address);	
+	END IF;
+	
+END;
+$BODY$ 
+LANGUAGE 'plpgsql'
+________________________________________________________________________________________________
+CREATE OR REPLACE function verifyCode(p_code varchar(200))
+RETURNS SETOF int AS
+$BODY$
+BEGIN
+	IF NOT EXISTS (SELECT * from CODES WHERE code = p_code)then
+			return query select 0 as resultado;
+	ELSE 
+		return query select 1 as resultado;
+	END IF;
+END;
+$BODY$ 
+LANGUAGE 'plpgsql'
+________________________________________________________________________________________________
+
+642639
+
+CREATE OR REPLACE function verifyCode(p_code varchar(200))
+RETURNS SETOF int AS 
+$BODY$
+BEGIN
+	IF NOT EXISTS (SELECT * from CODES WHERE code like p_code)then
+			return query select 0 AS resultado;
+		ELSE 
+			IF EXISTS (SELECT * from CODES WHERE code like p_code AND status = 0)then
+				update CODES set status = 1 where code like p_code;
+				return query select 1 as resultado;
+			ELSE IF EXISTS (SELECT * from CODES WHERE code like p_code AND status = 1)then
+				return query select 2 as resultado;
+			END IF;
+		END IF;
+	END IF;
+END;
+$BODY$ 
+LANGUAGE 'plpgsql'
+
+
+
+*******************************************************************************************************************************
+
+CREATE OR REPLACE function getProviderId(p_code varchar(200))
+RETURNS SETOF int AS
+$BODY$
+BEGIN
+	return query SELECT provider as resultado FROM codes where code = p_code;
+END;
+$BODY$ 
+LANGUAGE 'plpgsql'
+
+
+select * from codes
+
+select getProviderId as resultado from getProviderId('NDY0ODI5')
+
