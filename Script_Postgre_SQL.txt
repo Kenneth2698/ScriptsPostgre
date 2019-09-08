@@ -283,4 +283,77 @@ END;
 $BODY$ 
 LANGUAGE 'plpgsql'
 
-insert into provider values (0,'Principal','Turrialba')// CAMBIAR CON EL NOMBRE QUE VA A QUEDAR FINALMENTE
+
+
+
+
+*********************************************************
+
+
+CREATE or replace FUNCTION searchProduct(p_search varchar(50))
+RETURNS SETOF PRODUCT AS
+$BODY$
+DECLARE
+    reg RECORD;
+BEGIN
+    FOR REG IN SELECT id,name,price,image,status, description, provider FROM PRODUCT 
+			WHERE LOWER(name) like LOWER(concat('%',p_search,'%')) OR LOWER(description) like LOWER(concat('%',p_search,'%')) ORDER BY id LOOP
+			
+       RETURN NEXT reg;
+    END LOOP;
+    RETURN;
+END
+$BODY$ LANGUAGE 'plpgsql'
+
+
+
+
+CREATE TABLE USER_SEARCH (
+	userId int REFERENCES users(id),
+	search varchar(50)
+)
+
+
+
+CREATE OR REPLACE function registerSearch(p_user int , p_search varchar(50))
+RETURNS VOID AS
+$BODY$
+BEGIN
+	IF NOT EXISTS (SELECT * from user_search WHERE userId = p_user AND search = p_search)then
+		INSERT INTO user_search VALUES(p_user ,p_search);	
+	END IF;
+END;
+$BODY$ 
+LANGUAGE 'plpgsql'
+
+
+
+CREATE or replace FUNCTION getRandomSearch(p_user int)
+RETURNS SETOF user_search AS
+$BODY$
+DECLARE
+    reg RECORD;
+BEGIN
+    FOR REG IN SELECT userId,search FROM user_search ORDER BY random() LIMIT 1 LOOP
+		RETURN NEXT reg;
+    END LOOP;
+    RETURN;
+END
+$BODY$ LANGUAGE 'plpgsql'
+
+
+
+CREATE or replace FUNCTION getSuggestions(p_search varchar(50))
+RETURNS SETOF PRODUCT AS
+$BODY$
+DECLARE
+    reg RECORD;
+BEGIN
+    FOR REG IN SELECT id,name,price,image,status, description, provider FROM PRODUCT 
+			WHERE LOWER(name) like LOWER(concat('%',p_search,'%')) OR LOWER(description) like LOWER(concat('%',p_search,'%')) ORDER BY random() LIMIT 4 LOOP
+			
+       RETURN NEXT reg;
+    END LOOP;
+    RETURN;
+END
+$BODY$ LANGUAGE 'plpgsql'
